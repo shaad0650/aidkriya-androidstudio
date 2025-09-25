@@ -22,7 +22,8 @@ class AuthRepository(
         val body = res.body() ?: throw Exception("Empty response")
         // persist token + update in-memory holder
         tokenStorage.saveToken(body.access_token)
-        ApiProvider.apply { NetworkModule.TokenHolder.accessToken = body.access_token }
+        ApiProvider.TokenHolder.accessToken = body.access_token // Corrected line
         return body
     }
+
 }

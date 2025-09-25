@@ -7,52 +7,42 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-// Extension property to easily access DataStore
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_prefs")
+// Extension property to instantiate DataStore
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "auth_tokens")
 
 class TokenStorage(private val context: Context) {
+
     companion object {
-        private val ACCESS_KEY = stringPreferencesKey("jwt_access")
-        private val REFRESH_KEY = stringPreferencesKey("jwt_refresh")
+        // Define the key for storing the access token
+        private val ACCESS_TOKEN_KEY = stringPreferencesKey("access_token")
     }
 
-    // Save access & refresh token
-    suspend fun saveTokens(access: String, refresh: String? = null) {
-        context.dataStore.edit { prefs ->
-            prefs[ACCESS_KEY] = access
-            refresh?.let { prefs[REFRESH_KEY] = it }
+    /**
+     * Saves the access token to DataStore.
+     * This is a suspend function as DataStore operations are asynchronous.
+     */
+    suspend fun saveToken(token: String) {
+        context.dataStore.edit { preferences ->
+            preferences[ACCESS_TOKEN_KEY] = token
         }
     }
 
-    // Save only access token (if refresh unchanged)
-    suspend fun saveAccessToken(access: String) {
-        context.dataStore.edit { prefs ->
-            prefs[ACCESS_KEY] = access
+    /**
+     * Retrieves the access token from DataStore as a Flow.
+     */
+    val getToken: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[ACCESS_TOKEN_KEY]
         }
-    }
 
-    // Flow of access token (UI can observe changes)
-    val accessTokenFlow: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[ACCESS_KEY]
-    }
-
-    // Flow of refresh token
-    val refreshTokenFlow: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[REFRESH_KEY]
-    }
-
-    // Load once (blocking)
-    suspend fun loadAccessToken(): String? = accessTokenFlow.first()
-    suspend fun loadRefreshToken(): String? = refreshTokenFlow.first()
-
-    // Quick check
-    suspend fun hasToken(): Boolean = loadAccessToken() != null
-
-    // Clear DataStore (logout)
-    suspend fun clear() {
-        context.dataStore.edit { it.clear() }
+    /**
+     * Clears the access token from DataStore.
+     */
+    suspend fun clearToken() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(ACCESS_TOKEN_KEY)
+        }
     }
 }
